@@ -35,7 +35,8 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(electric-vehicle electric-vehicle.c )
+add_executable(electric-vehicle 
+    src/electric_vehicle.cpp )
 
 pico_set_program_name(electric-vehicle "electric-vehicle")
 pico_set_program_version(electric-vehicle "0.1")
