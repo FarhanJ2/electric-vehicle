@@ -25,15 +25,15 @@ class trapezoid_profile {
         float get_output_pos();
         float get_output_vel();
 
-        float timeUntilLeft(float target);
+        float time_until_left(float target);
 
         // Flip the sign of the position based on direction
-        float directPosition(float currPosition) {
+        float direct_position(float currPosition) {
             return currPosition * direction;
         }
 
         // Flip the sign of the velocity based on direction
-        float directVelocity(float currVelocity) {
+        float direct_velocity(float currVelocity) {
             return currVelocity * direction;
         }
 
