@@ -8,13 +8,11 @@ void periodic();
 int main() {
     stdio_init_all();
 
-    // Initialise the Wi-Fi chip
     if (cyw43_arch_init()) {
         printf("Wi-Fi init failed\n");
         return -1;
     }
-
-    // Turn on the Pico W LED
+    cyw43_arch_enable_ap_mode("elec-vehicle", NULL, CYW43_AUTH_WPA2_AES_PSK);
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
 
     while (true) {
