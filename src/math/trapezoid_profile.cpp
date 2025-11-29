@@ -1,4 +1,4 @@
-#include "trapezoid_profile.h"
+#include "math/trapezoid_profile.h"
 #include <cmath>
 #include <algorithm>
 
