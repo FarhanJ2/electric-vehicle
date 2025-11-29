@@ -83,8 +83,6 @@ int main() {
 
     // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
 
-    
-
     bool led_on = true;
     const uint32_t blink_ms = 500; // toggle every 0.5s -> ~1 Hz blink
     absolute_time_t next_blink = make_timeout_time_ms(blink_ms);
@@ -94,7 +92,6 @@ int main() {
             led_on = !led_on;
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
             next_blink = make_timeout_time_ms(blink_ms);
-            std::printf("LED is now %s\n", led_on ? "ON" : "OFF");
         }
         sleep_ms(int(constants::dt * 1000));
     }
