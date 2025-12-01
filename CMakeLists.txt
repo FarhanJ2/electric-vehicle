@@ -52,6 +52,7 @@ add_executable(elec-vehicle
         src/periodic.cpp
         src/math/trapezoid_profile.cpp
         src/math/vector_3d.cpp
+        src/hardware/button_hw.cpp
         src/hardware/imu_hw.cpp
         src/hardware/motor_hw.cpp
         src/hardware/oled_hw.cpp

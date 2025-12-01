@@ -12,6 +12,7 @@
 
 #include "hardware/imu_hw.h"
 #include "hardware/oled_hw.h"
+#include "hardware/button_hw.h"
 
 // SPI Defines
 // We are going to use SPI 0, and allocate it to the following GPIO pins
@@ -105,6 +106,8 @@ int main() {
     oled_hw_print(0, 55, ("[System " + std::string(has_fault == 0 ? "READY" : "FAILED") + std::string("]")).c_str());
     oled_hw_update();
 
+    button_hw start_prod(13);
+
     bool led_on = true;
     /* 
     * Blink the onboard LED according to fault status:
@@ -124,6 +127,13 @@ int main() {
     absolute_time_t next_blink = make_timeout_time_ms(blink_ms);
     while (true) {
         periodic();
+        start_prod.update();
+
+        if (start_prod.just_pressed()) {
+            printf("Start button pressed.\n");
+            sleep_ms(10);
+        }
+
         imu_hw_poll();
         if (absolute_time_diff_us(get_absolute_time(), next_blink) <= 0) {
             led_on = !led_on;
