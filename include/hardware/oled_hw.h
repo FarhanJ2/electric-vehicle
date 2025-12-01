@@ -7,7 +7,7 @@
 #define ADDR 0x3C
 static inline i2c_inst_t* I2C_PORT = i2c1;
 
-void oled_hw_init();
+int oled_hw_init();
 void oled_hw_clear();
 void oled_hw_print(int x, int y, const char* text);
 void oled_hw_update();

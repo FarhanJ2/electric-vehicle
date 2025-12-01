@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <string>
 
 #include "hardware/i2c.h"
 #include "hardware/spi.h"
@@ -80,21 +81,51 @@ int main() {
     sleep_ms(1000); // wait for a second
 
     // Initialize hardware
-    bool imu_failed = false;
-    bool oled_failed = false;
+    bool imu_fault = true;
+    bool oled_fault = true;
+    bool lmotor_fault = true;
+    bool rmotor_fault = true;
+    bool has_fault = false;
     // if (imu_hw_init()) {
     //     printf("[IMU] initialization failed!\n");
     //     imu_failed = true;
     // }
-    oled_hw_init();
+
+    if (oled_hw_init()) {
+        printf("[OLED] initialization failed!\n");
+        oled_fault = false;
+    }
+
+    has_fault = imu_fault || lmotor_fault || rmotor_fault || oled_fault;
+    uint8_t fault_count =
+        (imu_fault ? 1 : 0) +
+        (lmotor_fault ? 1 : 0) +
+        (rmotor_fault ? 1 : 0);
+
     oled_hw_clear();
-    oled_hw_print(0, 0, "Hello Farhan!");
-    oled_hw_print(0, 20, "OLED Ready");
+    oled_hw_print(0, 0, "Nebula Runner [Alpha]");
+    oled_hw_print(0, 20, ("[IMU] " + std::string(imu_fault ? "FAULT" : "READY")).c_str());
+    oled_hw_print(0, 30, ("[MOTORLEFT] " + std::string(lmotor_fault ? "FAULT" : "READY")).c_str());
+    oled_hw_print(0, 40, ("[MOTORRIGHT] " + std::string(rmotor_fault ? "FAULT" : "READY")).c_str());
+    oled_hw_print(0, 55, ("[System " + std::string(has_fault == 0 ? "READY" : "FAILED") + std::string("]")).c_str());
     oled_hw_update();
 
     bool led_on = true;
-    const uint32_t blink_ms = 
-        
+    /* 
+    * Blink the onboard LED according to fault status:
+    * No Fault: Solid On
+    * IMU Fault: 500ms blink
+    * Motor Fault: 100ms blink
+    * Other Faults (i.e. OLED): 800ms blink
+    */
+    const uint32_t blink_ms =
+        fault_count > 1 
+            ? 50 
+            : has_fault ?
+                imu_fault ? 500 : 
+                    (lmotor_fault || rmotor_fault) ? 100 : 800
+                : 0;
+
     absolute_time_t next_blink = make_timeout_time_ms(blink_ms);
     while (true) {
         periodic();

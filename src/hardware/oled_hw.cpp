@@ -4,7 +4,7 @@
 
 static ssd1306_t disp;
 
-void oled_hw_init() {
+int oled_hw_init() {
     // init I2C @ 400kHz
     i2c_init(I2C_PORT, 400000);
 
@@ -14,9 +14,10 @@ void oled_hw_init() {
     gpio_pull_up(OLED_PIN_SCL);
 
     // init SSD1306
-    ssd1306_init(&disp, 128, 64, ADDR, I2C_PORT);
+    bool success = ssd1306_init(&disp, 128, 64, ADDR, I2C_PORT);
     ssd1306_clear(&disp);
     ssd1306_show(&disp);
+    return !success;
 }
 
 void oled_hw_clear() {
