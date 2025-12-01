@@ -3,6 +3,7 @@
 #include "hardware/i2c.h"
 #include "hardware/spi.h"
 #include "hardware/uart.h"
+#include "hardware/imu_hw.h"
 #include "pico/cyw43_arch.h"
 #include "pico/stdlib.h"
 
@@ -19,21 +20,21 @@
 #define PIN_MOSI 19
 
 // I2C defines
-// This example will use I2C0 on GPIO8 (SDA) and GPIO9 (SCL) running at 400KHz.
-// Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
+// Use I2C0 on GPIO4 (SDA) and GPIO5 (SCL) running at 100KHz.
+// These match the IMU wiring defined in imu_hw.h.
 #define I2C_PORT i2c0
-#define I2C_SDA 8
-#define I2C_SCL 9
+#define I2C_SDA 4
+#define I2C_SCL 5
 
 // UART defines
 // By default the stdout UART is `uart0`, so we will use the second one
 #define UART_ID uart1
 #define BAUD_RATE 115200
 
-// Use pins 4 and 5 for UART1
+// Move UART1 off the IMU pins to avoid conflicts with I2C on 4/5
 // Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
-#define UART_TX_PIN 4
-#define UART_RX_PIN 5
+#define UART_TX_PIN 8
+#define UART_RX_PIN 9
 
 int main() {
     stdio_init_all();
@@ -56,8 +57,8 @@ int main() {
     gpio_put(PIN_CS, 1);
     // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
 
-    // I2C Initialisation. Using it at 400Khz.
-    i2c_init(I2C_PORT, 400 * 1000);
+    // I2C Initialisation. Use 100kHz to match the IMU driver setup.
+    i2c_init(I2C_PORT, 100 * 1000);
 
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
@@ -83,11 +84,21 @@ int main() {
 
     // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
 
+    sleep_ms(1000); // wait for a second
+
+    // Initialize IMU hardware
+    bool imu_failed = false;
+    // if (imu_hw_init()) {
+    //     printf("[IMU] initialization failed!\n");
+    //     imu_failed = true;
+    // }
+
     bool led_on = true;
     const uint32_t blink_ms = 500; // toggle every 0.5s -> ~1 Hz blink
     absolute_time_t next_blink = make_timeout_time_ms(blink_ms);
     while (true) {
         periodic();
+        imu_hw_poll();
         if (absolute_time_diff_us(get_absolute_time(), next_blink) <= 0) {
             led_on = !led_on;
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
