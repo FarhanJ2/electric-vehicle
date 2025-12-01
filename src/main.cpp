@@ -3,12 +3,14 @@
 #include "hardware/i2c.h"
 #include "hardware/spi.h"
 #include "hardware/uart.h"
-#include "hardware/imu_hw.h"
 #include "pico/cyw43_arch.h"
 #include "pico/stdlib.h"
 
 #include "periodic.h"
 #include "constant.h"
+
+#include "hardware/imu_hw.h"
+#include "hardware/oled_hw.h"
 
 // SPI Defines
 // We are going to use SPI 0, and allocate it to the following GPIO pins
@@ -57,15 +59,6 @@ int main() {
     gpio_put(PIN_CS, 1);
     // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
 
-    // I2C Initialisation. Use 100kHz to match the IMU driver setup.
-    i2c_init(I2C_PORT, 100 * 1000);
-
-    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C_SDA);
-    gpio_pull_up(I2C_SCL);
-    // For more examples of I2C use see https://github.com/raspberrypi/pico-examples/tree/master/i2c
-
     // Example to turn on the Pico W LED
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
 
@@ -86,15 +79,22 @@ int main() {
 
     sleep_ms(1000); // wait for a second
 
-    // Initialize IMU hardware
+    // Initialize hardware
     bool imu_failed = false;
+    bool oled_failed = false;
     // if (imu_hw_init()) {
     //     printf("[IMU] initialization failed!\n");
     //     imu_failed = true;
     // }
+    oled_hw_init();
+    oled_hw_clear();
+    oled_hw_print(0, 0, "Hello Farhan!");
+    oled_hw_print(0, 20, "OLED Ready");
+    oled_hw_update();
 
     bool led_on = true;
-    const uint32_t blink_ms = 500; // toggle every 0.5s -> ~1 Hz blink
+    const uint32_t blink_ms = 
+        
     absolute_time_t next_blink = make_timeout_time_ms(blink_ms);
     while (true) {
         periodic();

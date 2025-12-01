@@ -15,8 +15,8 @@ int imu_hw_init() {
     printf("[IMU] reset...\n");
     uint8_t activate = mpu9250_reset(
         &mpu92,
-        PIN_SDA,
-        PIN_SCL,
+        IMU_PIN_SDA,
+        IMU_PIN_SCL,
         DEVICE_ADDRESS,
         i2c0,
         100 * 1000 // frequency 100kHz

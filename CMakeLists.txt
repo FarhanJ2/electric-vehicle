@@ -33,8 +33,18 @@ project(elec-vehicle C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Add libraries
+# Add libraries // Only add if they have a CMakeLists.txt file
 add_subdirectory(libs/mp92plus)
+add_library(pico_ssd1306 STATIC
+        libs/pico-ssd1306/ssd1306.c
+)
+target_include_directories(pico_ssd1306 PUBLIC
+        ${CMAKE_CURRENT_LIST_DIR}/libs/pico-ssd1306
+)
+target_link_libraries(pico_ssd1306 PUBLIC
+        pico_stdlib
+        hardware_i2c
+)
 
 # Add executable. Default name is the project name, version 0.1
 add_executable(elec-vehicle
@@ -44,6 +54,7 @@ add_executable(elec-vehicle
         src/math/vector_3d.cpp
         src/hardware/imu_hw.cpp
         src/hardware/motor_hw.cpp
+        src/hardware/oled_hw.cpp
 )
 
 pico_set_program_name(elec-vehicle "elec-vehicle")
@@ -68,6 +79,7 @@ target_link_libraries(elec-vehicle
         hardware_i2c
         pico_cyw43_arch_none
         mp92plus
+        pico_ssd1306
         )
 
 pico_add_extra_outputs(elec-vehicle)
