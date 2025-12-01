@@ -22,13 +22,6 @@
 #define PIN_SCK  18
 #define PIN_MOSI 19
 
-// I2C defines
-// Use I2C0 on GPIO4 (SDA) and GPIO5 (SCL) running at 100KHz.
-// These match the IMU wiring defined in imu_hw.h.
-#define I2C_PORT i2c0
-#define I2C_SDA 4
-#define I2C_SCL 5
-
 // UART defines
 // By default the stdout UART is `uart0`, so we will use the second one
 #define UART_ID uart1
