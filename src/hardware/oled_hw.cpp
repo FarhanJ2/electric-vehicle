@@ -1,6 +1,8 @@
 #include "hardware/oled_hw.h"
 #include "ssd1306.h"
 #include "font.h"
+#include "oled_frames.h"
+#include <string.h>
 
 static ssd1306_t disp;
 
@@ -30,4 +32,15 @@ void oled_hw_print(int x, int y, const char* text) {
 
 void oled_hw_update() {
     ssd1306_show(&disp);
+}
+
+void play_animation(uint32_t delay_ms) {
+    for (int i = 0; i < FRAME_COUNT; ++i) {
+        // copy frame buffer into display buffer
+        memcpy(disp.buffer, FRAMES[i], FRAME_BUFFER_SIZE);
+        oled_hw_update();
+        // send buffer to display
+        ssd1306_show(&disp);
+        sleep_ms(delay_ms);
+    }
 }

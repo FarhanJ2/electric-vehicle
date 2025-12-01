@@ -96,6 +96,8 @@ int main() {
         (rmotor_fault ? 1 : 0);
 
     oled_hw_clear();
+    play_animation(10);
+    oled_hw_clear();
     oled_hw_print(0, 0, "Nebula Runner [Alpha]");
     oled_hw_print(0, 20, ("[IMU] " + std::string(imu_fault ? "FAULT" : "READY")).c_str());
     oled_hw_print(0, 30, ("[MOTORLEFT] " + std::string(lmotor_fault ? "FAULT" : "READY")).c_str());

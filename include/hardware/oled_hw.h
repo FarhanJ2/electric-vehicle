@@ -11,3 +11,4 @@ int oled_hw_init();
 void oled_hw_clear();
 void oled_hw_print(int x, int y, const char* text);
 void oled_hw_update();
+void play_animation(uint32_t delay_ms);
