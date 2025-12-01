@@ -75,19 +75,19 @@ int main() {
     sleep_ms(1000); // wait for a second
 
     // Initialize hardware
-    bool imu_fault = true;
-    bool oled_fault = true;
-    bool lmotor_fault = true;
-    bool rmotor_fault = true;
+    bool imu_fault = false;
+    bool oled_fault = false;
+    bool lmotor_fault = false;
+    bool rmotor_fault = false;
     bool has_fault = false;
     // if (imu_hw_init()) {
     //     printf("[IMU] initialization failed!\n");
-    //     imu_failed = true;
+    //     imu_fault = true;
     // }
 
     if (oled_hw_init()) {
         printf("[OLED] initialization failed!\n");
-        oled_fault = false;
+        oled_fault = true;
     }
 
     has_fault = imu_fault || lmotor_fault || rmotor_fault || oled_fault;
