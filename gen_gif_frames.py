@@ -25,7 +25,6 @@ def frame_to_buffer(img):
         for x in range(OLED_WIDTH):
             idx = x + OLED_WIDTH * page
             if pixels[x, y] == 0:   # black = 0, white = 255 (invert if you want)
-                # if you want the planet to glow white on black bg, flip this condition
                 continue
             buf[idx] |= (1 << bit)
     return buf

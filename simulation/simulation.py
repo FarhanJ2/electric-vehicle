@@ -44,7 +44,7 @@ def simulate(voltage, duration=3.0, dt=0.01):
 
 
 if __name__ == "__main__":
-    time, pos, vel = simulate(voltage=6.0)
+    time, pos, vel = simulate(voltage=p.max_voltage)
 
     plt.subplot(2,1,1)
     plt.plot(time, pos)
