@@ -35,6 +35,8 @@ pico_sdk_init()
 
 # Add libraries // Only add if they have a CMakeLists.txt file
 add_subdirectory(libs/mp92plus)
+add_subdirectory(libs/mpu_9250)
+
 add_library(pico_ssd1306 STATIC
         libs/pico-ssd1306/ssd1306.c
 )
@@ -81,6 +83,7 @@ target_link_libraries(elec-vehicle
         pico_cyw43_arch_none
         mp92plus
         pico_ssd1306
+        pico_mpu_9250
         )
 
 pico_add_extra_outputs(elec-vehicle)
