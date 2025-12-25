@@ -16,10 +16,10 @@
    Connections on Raspberry Pi Pico board and a generic MPU9250 board, other
    boards may vary.
 
-   GPIO 4 (pin 6) MISO/spi0_rx-> ADO on MPU9250 board
+   GPIO 16 (pin 21) MISO/spi0_rx-> ADO on MPU9250 board
    GPIO 5 (pin 7) Chip select -> NCS on MPU9250 board
-   GPIO 6 (pin 9) SCK/spi0_sclk -> SCL on MPU9250 board
-   GPIO 7 (pin 10) MOSI/spi0_tx -> SDA on MPU9250 board
+   GPIO 2 (pin 4) SCK/spi0_sclk -> SCL on MPU9250 board
+   GPIO 19 (pin 25) MOSI/spi0_tx -> SDA on MPU9250 board
    3.3v (pin 36) -> VCC on MPU9250 board
    GND (pin 38)  -> GND on MPU9250 board
 
@@ -30,10 +30,10 @@
    using of I2C names
 */
 
-#define PIN_MISO 4
+#define PIN_MISO 16
 #define PIN_CS 5
-#define PIN_SCK 6
-#define PIN_MOSI 7
+#define PIN_SCK 2
+#define PIN_MOSI 19
 
 #define SPI_PORT spi0
 #define READ_BIT 0x80

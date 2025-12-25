@@ -2,9 +2,7 @@
 #include <cstdint>
 #include "pico/stdlib.h"
 
-#define IMU_PIN_SCL 3
-#define IMU_PIN_SDA 2
-#define PIN_INTERRUPT 2
+#define PIN_INTERRUPT 15
 #define DEVICE_ADDRESS 0x68
 
 int imu_hw_init();

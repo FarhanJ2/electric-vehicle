@@ -81,10 +81,10 @@ int main() {
     bool lmotor_fault = false;
     bool rmotor_fault = false;
     bool has_fault = false;
-    // if (imu_hw_init()) {
-    //     printf("[IMU] initialization failed!\n");
-    //     imu_fault = true;
-    // }
+    if (imu_hw_init()) {
+        printf("[IMU] initialization failed!\n");
+        imu_fault = true;
+    }
 
     if (oled_hw_init()) {
         printf("[OLED] initialization failed!\n");
