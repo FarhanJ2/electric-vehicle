@@ -80,6 +80,7 @@ target_include_directories(elec-vehicle PRIVATE
 target_link_libraries(elec-vehicle 
         hardware_spi
         hardware_i2c
+        hardware_pwm
         pico_cyw43_arch_none
         mp92plus
         pico_ssd1306

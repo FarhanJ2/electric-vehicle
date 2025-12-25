@@ -13,6 +13,7 @@
 #include "hardware/imu_hw.h"
 #include "hardware/oled_hw.h"
 #include "hardware/button_hw.h"
+#include "hardware/motor_hw.h"
 
 // SPI Defines
 // We are going to use SPI 0, and allocate it to the following GPIO pins
@@ -90,6 +91,8 @@ int main() {
         oled_fault = true;
     }
 
+    motor_hw_init();
+
     has_fault = imu_fault || lmotor_fault || rmotor_fault || oled_fault;
     uint8_t fault_count =
         (imu_fault ? 1 : 0) +
@@ -125,13 +128,19 @@ int main() {
                 : 0;
 
     absolute_time_t next_blink = make_timeout_time_ms(blink_ms);
+
     while (true) {
         periodic();
         start_prod.update();
 
-        if (start_prod.just_pressed()) {
+        if (start_prod.is_pressed()) {
             printf("Start button pressed.\n");
-            sleep_ms(10);
+            motor_forward(1000);
+        }
+
+        if (start_prod.just_released()) {
+            printf("Start button released.\n");
+            motor_stop();
         }
 
         imu_hw_poll();
@@ -141,5 +150,9 @@ int main() {
             next_blink = make_timeout_time_ms(blink_ms);
         }
         sleep_ms(int(constants::dt * 1000));
+
+        // motor_test();
+        // sleep_ms(1000);
+
     }
 }
