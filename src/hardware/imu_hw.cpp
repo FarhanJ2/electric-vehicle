@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include <cstdio>
+#include <string>
 extern "C" {
     #include "mpu9250.h"
 }
@@ -73,10 +74,27 @@ void imu_hw_poll(void) {
         accel_g[i] = accel_raw[i] / 16384.0f;  // ±2G range
         gyro_dps[i] = (gyro_raw[i] - gyroCal[i]) / 131.0f;  // ±250°/s range
     }
+}
 
-    // printf("A[g]: %.3f %.3f %.3f | G[dps]: %.2f %.2f %.2f\n",
-    //        accel_g[0], accel_g[1], accel_g[2],
-    //        gyro_dps[0], gyro_dps[1], gyro_dps[2]);
+std::string get_imu_status(void) {
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer),
+             "Accel [g]: X=%.3f Y=%.3f Z=%.3f | Gyro [dps]: X=%.2f Y=%.2f Z=%.2f",
+             accel_g[0], accel_g[1], accel_g[2],
+             gyro_dps[0], gyro_dps[1], gyro_dps[2]);
+    return std::string(buffer);
+}
+
+void imu_get_accel(float* ax, float* ay, float* az) {
+    if (ax) *ax = accel_g[0];
+    if (ay) *ay = accel_g[1];
+    if (az) *az = accel_g[2];
+}
+
+void imu_get_gyro(float* gx, float* gy, float* gz) {
+    if (gx) *gx = gyro_dps[0];
+    if (gy) *gy = gyro_dps[1];
+    if (gz) *gz = gyro_dps[2];
 }
 
 bool imu_data_available(void) {

@@ -15,6 +15,27 @@
 #include "hardware/button_hw.h"
 #include "hardware/motor_hw.h"
 
+void button_bindings();
+void update_display();
+
+enum DisplayMode {
+    DISPLAY_STATUS,
+    DISPLAY_IMU
+};
+
+DisplayMode current_display = DISPLAY_STATUS;
+
+// initialize hardware faults
+bool imu_fault = false;
+bool oled_fault = false;
+bool lmotor_fault = false;
+bool rmotor_fault = false;
+bool has_fault = false;
+
+button_hw start_prod(1);
+button_hw btn_forward(13);
+button_hw btn_backward(28);
+
 int main() {
     stdio_init_all();
     sleep_ms(2000); // give time to connect to serial console
@@ -39,12 +60,6 @@ int main() {
 
     sleep_ms(1000); // wait for a second
 
-    // Initialize hardware
-    bool imu_fault = false;
-    bool oled_fault = false;
-    bool lmotor_fault = false;
-    bool rmotor_fault = false;
-    bool has_fault = false;
     if (imu_hw_init()) {
         printf("[IMU] initialization failed!\n");
         imu_fault = true;
@@ -73,8 +88,6 @@ int main() {
     oled_hw_print(0, 55, ("[System " + std::string(has_fault == 0 ? "READY" : "FAILED") + std::string("]")).c_str());
     oled_hw_update();
 
-    button_hw start_prod(13);
-
     bool led_on = true;
     /* 
     * Blink the onboard LED according to fault status:
@@ -95,26 +108,85 @@ int main() {
 
     while (true) {
         periodic();
-        start_prod.update();
-
-        if (start_prod.is_pressed()) {
-            motor_forward(1000);
-        }
-
-        if (start_prod.just_released()) {
-            motor_stop();
-        }
-
+        button_bindings();
         imu_hw_poll();
+        update_display();
+        
         if (absolute_time_diff_us(get_absolute_time(), next_blink) <= 0) {
             led_on = !led_on;
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
             next_blink = make_timeout_time_ms(blink_ms);
         }
         sleep_ms(int(constants::dt * 1000));
-
-        // motor_test();
-        // sleep_ms(1000);
-
     }
+}
+
+void button_bindings() {
+    start_prod.update();
+    btn_forward.update();
+    btn_backward.update();
+
+    if (start_prod.is_pressed()) {
+        motor_forward(1000);
+    }
+
+    if (start_prod.just_released()) {
+        motor_stop();
+    }
+
+    // Toggle display mode when forward button is pressed
+    if (btn_forward.just_pressed()) {
+        if (current_display == DISPLAY_STATUS) {
+            current_display = DISPLAY_IMU;
+        } else {
+            current_display = DISPLAY_STATUS;
+        }
+    }
+
+    // Go back to status when backward is pressed
+    if (btn_backward.just_pressed()) {
+        current_display = DISPLAY_STATUS;
+    }
+}
+
+void update_display() {
+    static absolute_time_t last_update = nil_time;
+    
+    // Update display every 100ms
+    if (!is_nil_time(last_update)) {
+        int64_t elapsed_us = absolute_time_diff_us(last_update, get_absolute_time());
+        if (elapsed_us < 100000) {  // 100ms
+            return;
+        }
+    }
+    last_update = get_absolute_time();
+    
+    oled_hw_clear();
+    
+    if (current_display == DISPLAY_STATUS) {
+        oled_hw_print(0, 0, "Nebula Runner [Alpha]");
+        oled_hw_print(0, 20, ("[IMU] " + std::string(imu_fault ? "FAULT" : "READY")).c_str());
+        oled_hw_print(0, 30, ("[MOTORLEFT] " + std::string(lmotor_fault ? "FAULT" : "READY")).c_str());
+        oled_hw_print(0, 40, ("[MOTORRIGHT] " + std::string(rmotor_fault ? "FAULT" : "READY")).c_str());
+        oled_hw_print(0, 55, ("[System " + std::string(has_fault == 0 ? "READY" : "FAILED") + std::string("]")).c_str());
+    } else if (current_display == DISPLAY_IMU) {
+        // Get current IMU values
+        float ax, ay, az, gx, gy, gz;
+        imu_get_accel(&ax, &ay, &az);
+        imu_get_gyro(&gx, &gy, &gz);
+        
+        oled_hw_print(0, 0, "IMU Live Data:");
+        
+        char buf[32];
+        snprintf(buf, sizeof(buf), "Ax:%.2f Ay:%.2f", ax, ay);
+        oled_hw_print(0, 20, buf);
+        
+        snprintf(buf, sizeof(buf), "Az:%.2f", az);
+        oled_hw_print(0, 30, buf);
+        
+        snprintf(buf, sizeof(buf), "Gx:%.1f Gy:%.1f", gx, gy);
+        oled_hw_print(0, 45, buf);
+    }
+    
+    oled_hw_update();
 }
