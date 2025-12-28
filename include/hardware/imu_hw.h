@@ -2,7 +2,7 @@
 #include <cstdint>
 #include "pico/stdlib.h"
 
-#define PIN_INTERRUPT 15
+#define PIN_INTERRUPT 5 // physical pin 5
 #define DEVICE_ADDRESS 0x68
 
 int imu_hw_init();
