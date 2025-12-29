@@ -37,10 +37,11 @@ bool imu_fault = false;
 bool oled_fault = false;
 bool lmotor_fault = false;
 bool rmotor_fault = false;
+bool drivetrain_fault = false;
 bool has_fault = false;
 
 bool wifi_fault = false;
-bool run_telemetry = true;
+bool run_telemetry = false;
 
 button_hw start_prod(1);
 button_hw btn_forward(13);
@@ -72,6 +73,11 @@ int main() {
     if (imu_hw_init()) {
         printf("[IMU] initialization failed!\n");
         imu_fault = true;
+    }
+
+    if (drivetrain_init()) {
+        printf("[Drivetrain] initialization failed!\n");
+        drivetrain_fault = true;
     }
 
     if (oled_hw_init()) {
@@ -109,20 +115,14 @@ int main() {
     }
 
     
-    has_fault = imu_fault || lmotor_fault || rmotor_fault || oled_fault;
+    has_fault = imu_fault || (wifi_fault && run_telemetry) || oled_fault;
     uint8_t fault_count =
         (imu_fault ? 1 : 0) +
-        (lmotor_fault ? 1 : 0) +
-        (rmotor_fault ? 1 : 0);
+        (drivetrain_fault ? 1 : 0) +
+        (oled_fault ? 1 : 0);
 
     oled_hw_clear();
     play_animation(10);
-    oled_hw_clear();
-    oled_hw_print(0, 0, "Nebula Runner [Alpha]");
-    oled_hw_print(0, 20, ("[IMU] " + std::string(imu_fault ? "FAULT" : "READY")).c_str());
-    oled_hw_print(0, 30, ("[Telemetry] " + std::string(wifi_fault ? "FAULT" : "READY")).c_str());
-    oled_hw_print(0, 55, ("[System " + std::string(has_fault == 0 ? "READY" : "FAILED") + std::string("]")).c_str());
-    oled_hw_update();
 
     bool led_on = true;
     /* 
@@ -210,10 +210,10 @@ void update_display() {
     oled_hw_clear();
     
     if (current_display == DISPLAY_STATUS) {
-        oled_hw_clear();
         oled_hw_print(0, 0, "Nebula Runner [Alpha]");
         oled_hw_print(0, 20, ("[IMU] " + std::string(imu_fault ? "FAULT" : "READY")).c_str());
         oled_hw_print(0, 30, ("[Telemetry] " + std::string(wifi_fault ? (run_telemetry ? "FAULT" : "DISABLED") : "READY")).c_str());
+        oled_hw_print(0, 40, ("[Drivetrain] " + drivetrain_fault_status()).c_str());
         oled_hw_print(0, 55, ("[System " + std::string(has_fault == 0 ? "READY" : "FAILED") + std::string("]")).c_str());
     } else if (current_display == DISPLAY_IMU_ANGLES) {
         oled_hw_print(0, 0, "IMU Angles:");
