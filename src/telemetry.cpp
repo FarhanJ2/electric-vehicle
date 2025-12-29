@@ -1,7 +1,9 @@
 #include "telemetry.h"
+#include "constant.h"
 
 #include <cstdio>
 #include <cstring>
+#include <cstdarg>
 
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
@@ -69,18 +71,16 @@ bool connect_to() {
     
     if (result != 0) {
         printf("[Telemetry] Failed to connect to WiFi (error %d)\n", result);
-        wifi_fault = false;
+        wifi_fault = true;
         return true;
     }
-    
-    printf("[Telemetry] WiFi connected!\n");
-    wifi_fault = true;
+    wifi_fault = false;
+    telemetry_print("[Telemetry] WiFi connected!\n");
     
     // Create UDP protocol control block
     telemetry_pcb = udp_new();
     if (!telemetry_pcb) {
         printf("[Telemetry] Failed to create UDP PCB\n");
-        wifi_fault = false;
         return true;
     }
     
@@ -89,7 +89,7 @@ bool connect_to() {
         printf("[Telemetry] Invalid PC IP address: %s\n", PC_IP);
         udp_remove(telemetry_pcb);
         telemetry_pcb = nullptr;
-        wifi_fault = false;
+        wifi_fault = true;
         return true;
     }
     return false;
@@ -99,7 +99,7 @@ void telemetry_send(float pitch, float roll, float yaw,
                    float ax, float ay, float az,
                    float gx, float gy, float gz) {
     // Check if telemetry is initialized
-    if (!wifi_fault || !telemetry_pcb) {
+    if (wifi_fault || !telemetry_pcb) {
         return;
     }
     
@@ -132,10 +132,41 @@ void telemetry_send(float pitch, float roll, float yaw,
     // }
 }
 
-void telemetry_led(bool on) {
-    if (chip_initialized) {
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, on ? 1 : 0);
+void telemetry_print(const char* fmt, ...) {
+    if (!run_telemetry) return;
+
+    if (wifi_fault || !telemetry_pcb) return;
+
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+
+    struct pbuf* p = pbuf_alloc(PBUF_TRANSPORT, strlen(buf), PBUF_RAM);
+    if (!p) return;
+
+    memcpy(p->payload, buf, strlen(buf));
+    udp_sendto(telemetry_pcb, p, &pc_addr, PC_PORT);
+    pbuf_free(p);
+}
+
+extern "C" int _write(int fd, const char* buf, int count) {
+    if (!run_telemetry) {
+        return count; // skip sending
     }
+
+    if (!wifi_fault && telemetry_pcb) {
+        int send_len = count;
+        if (send_len > 256) send_len = 256; // limit packet size
+        struct pbuf* p = pbuf_alloc(PBUF_TRANSPORT, send_len, PBUF_RAM);
+        if (p) {
+            memcpy(p->payload, buf, send_len);
+            udp_sendto(telemetry_pcb, p, &pc_addr, PC_PORT);
+            pbuf_free(p);
+        }
+    }
+    return count;
 }
 
 bool telemetry_is_connected() {

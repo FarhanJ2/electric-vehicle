@@ -40,7 +40,7 @@ bool rmotor_fault = false;
 bool has_fault = false;
 
 bool wifi_fault = false;
-bool run_telemetry = false;
+bool run_telemetry = true;
 
 button_hw start_prod(1);
 button_hw btn_forward(13);

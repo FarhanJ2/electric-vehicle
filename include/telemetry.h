@@ -36,8 +36,21 @@ bool connect_to();
  * @param gz Gyroscope Z (deg/s)
  */
 void telemetry_send(float pitch, float roll, float yaw,
-                   float ax, float ay, float az,
-                   float gx, float gy, float gz);
+                    float ax, float ay, float az,
+                    float gx, float gy, float gz);
+
+// Sends formatted string over UDP telemetry
+void telemetry_print(const char *fmt, ...);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    int _write(int fd, const char *buf, int count);
+
+#ifdef __cplusplus
+}
+#endif
 
 /**
  * Check if WiFi is connected
@@ -49,6 +62,6 @@ bool telemetry_is_connected();
  * Get WiFi connection status as string
  * @return Status string
  */
-const char* telemetry_get_status();
+const char *telemetry_get_status();
 
 #endif // TELEMETRY_H

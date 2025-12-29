@@ -41,24 +41,29 @@ class TelemetryReceiver:
         print(f"Telemetry server started on {self.host}:{self.port}")
         
     def _receive_data(self):
-        """Receive and parse telemetry data"""
         while self.running:
             try:
                 data, addr = self.sock.recvfrom(1024)
-                telemetry = json.loads(data.decode())
-                
-                with self.lock:
-                    self.timestamps.append(time.time() - self.start_time)
-                    self.pitch.append(telemetry.get('pitch', 0))
-                    self.roll.append(telemetry.get('roll', 0))
-                    self.yaw.append(telemetry.get('yaw', 0))
-                    self.ax.append(telemetry.get('ax', 0))
-                    self.ay.append(telemetry.get('ay', 0))
-                    self.az.append(telemetry.get('az', 0))
-                    self.gx.append(telemetry.get('gx', 0))
-                    self.gy.append(telemetry.get('gy', 0))
-                    self.gz.append(telemetry.get('gz', 0))
-                    
+                text = data.decode()
+
+                try:
+                    telemetry = json.loads(text)
+                    # IMU data
+                    with self.lock:
+                        self.timestamps.append(time.time() - self.start_time)
+                        self.pitch.append(telemetry.get('pitch', 0))
+                        self.roll.append(telemetry.get('roll', 0))
+                        self.yaw.append(telemetry.get('yaw', 0))
+                        self.ax.append(telemetry.get('ax', 0))
+                        self.ay.append(telemetry.get('ay', 0))
+                        self.az.append(telemetry.get('az', 0))
+                        self.gx.append(telemetry.get('gx', 0))
+                        self.gy.append(telemetry.get('gy', 0))
+                        self.gz.append(telemetry.get('gz', 0))
+                except json.JSONDecodeError:
+                    # Not JSON → debug string
+                    print(f"[DEBUG] {text.strip()}")
+
             except socket.timeout:
                 continue
             except Exception as e:

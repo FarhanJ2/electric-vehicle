@@ -1,4 +1,5 @@
 #include "hardware/imu_hw.h"
+#include "telemetry.h"
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include <cstdio>
@@ -178,7 +179,7 @@ void imu_hw_poll(void) {
     
     static int debug_counter = 0;
     if (debug_counter++ % 2000 == 0) {
-        printf("Status: %s | Bias: [%.2f, %.2f, %.2f] | Raw: [%.2f, %.2f, %.2f]\n",
+        telemetry_print("Status: %s | Bias: [%.2f, %.2f, %.2f] | Raw: [%.2f, %.2f, %.2f]\n",
                is_stationary ? "STILL" : "MOVING",
                runtime_bias[0], runtime_bias[1], runtime_bias[2],
                gyro_dps[0], gyro_dps[1], gyro_dps[2]);
