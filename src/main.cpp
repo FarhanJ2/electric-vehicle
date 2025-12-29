@@ -19,7 +19,7 @@
 #include "hardware/imu_hw.h"
 #include "hardware/oled_hw.h"
 #include "hardware/button_hw.h"
-#include "hardware/motor_hw.h"
+#include "hardware/drivetrain.h"
 
 void button_bindings();
 void update_display();
@@ -45,9 +45,6 @@ bool run_telemetry = true;
 button_hw start_prod(1);
 button_hw btn_forward(13);
 button_hw btn_backward(28);
-
-// hw motor instances
-motor_hw left_motor(constants::left_motor_ln1_pin, constants::left_motor_ln2_pin, constants::left_motor_ena_pin);
 
 int main() {
     stdio_init_all();
@@ -181,11 +178,11 @@ void button_bindings() {
     btn_backward.update();
 
     if (start_prod.is_pressed()) {
-        left_motor.forward(1000);
+        drivetrain_test();
     }
 
     if (start_prod.just_released()) {
-        left_motor.stop();
+        drivetrain_stop();
     }
 
     if (btn_forward.just_pressed()) {

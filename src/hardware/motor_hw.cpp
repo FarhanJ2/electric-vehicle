@@ -33,16 +33,16 @@ void motor_hw::pwm_set_duty(uint16_t duty) {
     pwm_set_chan_level(pwm_slice, pwm_gpio_to_channel(ena_pin), duty);
 }
 
-void motor_hw::forward(uint16_t speed) {
-    gpio_put(ln1_pin, 1);
-    gpio_put(ln2_pin, 0);
-    pwm_set_duty(speed);
-}
-
-void motor_hw::backward(uint16_t speed) {
-    gpio_put(ln1_pin, 0);
-    gpio_put(ln2_pin, 1);
-    pwm_set_duty(speed);
+void motor_hw::run(int16_t speed) {
+    bool forward = abs(speed) == speed;
+    if (forward) {
+        gpio_put(ln1_pin, 1);
+        gpio_put(ln2_pin, 0);
+    } else {
+        gpio_put(ln1_pin, 0);
+        gpio_put(ln2_pin, 1);
+    }
+    pwm_set_duty(abs(speed));
 }
 
 void motor_hw::stop() {
@@ -52,13 +52,13 @@ void motor_hw::stop() {
 }
 
 void motor_hw::test() {
-    forward(800);
+    run(800);
     sleep_ms(1500);
 
     stop();
     sleep_ms(500);
 
-    backward(800);
+    run(-800);
     sleep_ms(1500);
 
     stop();
