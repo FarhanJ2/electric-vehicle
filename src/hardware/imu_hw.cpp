@@ -18,6 +18,10 @@ float pitch = 0.0f;  // Rotation around Y-axis (forward/backward tilt)
 float roll = 0.0f;   // Rotation around X-axis (left/right tilt)
 float yaw = 0.0f;    // Rotation around Z-axis (heading)
 
+// moving avg filter for gyro smoothing
+static float gyro_history[3][5] = {{0}};  // store last 5 samples
+static int history_index = 0;
+
 int16_t gyro_bias[3] = {0};
 static volatile bool imu_data_ready = false;
 
@@ -79,9 +83,8 @@ void imu_hw_poll(void) {
     
     imu_data_ready = false;
     
-    // calculate dt
     absolute_time_t current_time = get_absolute_time();
-    float dt = absolute_time_diff_us(last_update_time, current_time) / 1000000.0f;  // Convert to seconds
+    float dt = absolute_time_diff_us(last_update_time, current_time) / 1000000.0f;
     last_update_time = current_time;
     
     int16_t accel_raw[3];
@@ -90,33 +93,96 @@ void imu_hw_poll(void) {
     mpu9250_read_raw_accel(accel_raw);
     mpu9250_read_raw_gyro(gyro_raw);
 
-    // convert to G's and deg/s
+    // for (int i = 0; i < 3; i++) {
+    //     gyro_dps[i] = (gyro_raw[i] - gyroCal[i]) / 131.0f;
+        
+    //     // Add to history
+    //     gyro_history[i][history_index] = gyro_dps[i];
+        
+    //     // Calculate average
+    //     float sum = 0;
+    //     for (int j = 0; j < 5; j++) {
+    //         sum += gyro_history[i][j];
+    //     }
+    //     gyro_dps[i] = sum / 5.0f;  // smoothed value
+    // }
+    // history_index = (history_index + 1) % 5;
+
+    // Convert to G's and degrees/sec
     for (int i = 0; i < 3; i++) {
-        accel_g[i] = accel_raw[i] / 16384.0f;  // +-2G range
-        gyro_dps[i] = (gyro_raw[i] - gyroCal[i]) / 131.0f;  // +-250°/s range
+        accel_g[i] = accel_raw[i] / 16384.0f;
+        gyro_dps[i] = (gyro_raw[i] - gyroCal[i]) / 131.0f;
     }
-    // === Complementary Filter ===
-    // Combines gyro (short-term accuracy) with accel (long-term stability)
     
-    // Step 1: Get angle from accelerometer (using gravity direction)
-    float accel_pitch = atan2(accel_g[1], accel_g[2]) * 57.2958f;  // radians to degrees
+    // === RUNTIME DRIFT CORRECTION ===
+    static float runtime_bias[3] = {0, 0, 0};
+    static bool bias_initialized = false;
+    
+    // calc total motion
+    float gyro_magnitude = sqrt(gyro_dps[0]*gyro_dps[0] + 
+                                gyro_dps[1]*gyro_dps[1] + 
+                                gyro_dps[2]*gyro_dps[2]);
+    
+    float accel_magnitude = sqrt(accel_g[0]*accel_g[0] + 
+                                 accel_g[1]*accel_g[1] + 
+                                 accel_g[2]*accel_g[2]);
+    
+    // Detect if robot is stationary:
+    // - Low gyro rates (< 3°/s on all axes)
+    // - Accel magnitude near 1g (not accelerating/decelerating)
+    const float GYRO_STATIONARY_THRESHOLD = 3.0f;  // degrees/sec
+    const float ACCEL_STATIONARY_THRESHOLD = 0.15f;  // G's from 1.0g
+    
+    bool is_stationary = (gyro_magnitude < GYRO_STATIONARY_THRESHOLD) && 
+                         (fabs(accel_magnitude - 1.0f) < ACCEL_STATIONARY_THRESHOLD);
+    
+    if (is_stationary) {
+        // if robot is still slowly estimate the bias
+        if (!bias_initialized) {
+            // first time stationary init quick
+            for (int i = 0; i < 3; i++) {
+                runtime_bias[i] = gyro_dps[i];
+            }
+            bias_initialized = true;
+        } else {
+            // low pass filter to update bias slowly
+            for (int i = 0; i < 3; i++) {
+                runtime_bias[i] = runtime_bias[i] * 0.995f + gyro_dps[i] * 0.005f;
+            }
+        }
+    }
+    
+    // apply runtime bias correction
+    float corrected_gyro[3];
+    for (int i = 0; i < 3; i++) {
+        corrected_gyro[i] = gyro_dps[i] - runtime_bias[i];
+    }
+    
+    // === CALCULATE ANGLES ===
+    float accel_pitch = atan2(accel_g[1], accel_g[2]) * 57.2958f;
     float accel_roll = atan2(-accel_g[0], accel_g[2]) * 57.2958f;
     
-    // Step 2: Integrate gyro
-    float gyro_pitch = pitch + gyro_dps[0] * dt;
-    float gyro_roll = roll + gyro_dps[1] * dt;
+    float gyro_pitch = pitch + corrected_gyro[0] * dt;
+    float gyro_roll = roll + corrected_gyro[1] * dt;
     
-    // Step 3: Complementary filter (98% gyro, 2% accel)
-    // This corrects gyro drift while keeping fast response
+    // Complementary filter
     pitch = 0.98f * gyro_pitch + 0.02f * accel_pitch;
     roll = 0.98f * gyro_roll + 0.02f * accel_roll;
     
-    // Yaw can only come from gyro (accel cant measure rotation around vertical axis)
-    yaw += gyro_dps[2] * dt; // TODO FIX WEIRD DRIFT, maybe add magnetometer later, Gy consistently is at -1.5, -2.0 dps when still
+    // Yaw with corrected gyro
+    yaw += corrected_gyro[2] * dt;
     
-    // wrap yaw to [0, 360)
-    if (yaw > 360.0f) yaw -= 360.0f;
-    if (yaw < 0.0f) yaw += 360.0f;
+    // Wrap yaw to 0-360
+    while (yaw > 360.0f) yaw -= 360.0f;
+    while (yaw < 0.0f) yaw += 360.0f;
+    
+    static int debug_counter = 0;
+    if (debug_counter++ % 2000 == 0) {
+        printf("Status: %s | Bias: [%.2f, %.2f, %.2f] | Raw: [%.2f, %.2f, %.2f]\n",
+               is_stationary ? "STILL" : "MOVING",
+               runtime_bias[0], runtime_bias[1], runtime_bias[2],
+               gyro_dps[0], gyro_dps[1], gyro_dps[2]);
+    }
 }
 
 std::string get_imu_status(void) {
