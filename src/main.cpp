@@ -46,6 +46,9 @@ button_hw start_prod(1);
 button_hw btn_forward(13);
 button_hw btn_backward(28);
 
+// hw motor instances
+motor_hw left_motor(constants::left_motor_ln1_pin, constants::left_motor_ln2_pin, constants::left_motor_ena_pin);
+
 int main() {
     stdio_init_all();
     sleep_ms(2000); // give time to connect to serial console
@@ -78,8 +81,6 @@ int main() {
         printf("[OLED] initialization failed!\n");
         oled_fault = true;
     }
-
-    motor_hw_init();
 
     if (run_telemetry) {
         const int max_retries = 3;
@@ -180,11 +181,11 @@ void button_bindings() {
     btn_backward.update();
 
     if (start_prod.is_pressed()) {
-        motor_forward(1000);
+        left_motor.forward(1000);
     }
 
     if (start_prod.just_released()) {
-        motor_stop();
+        left_motor.stop();
     }
 
     if (btn_forward.just_pressed()) {

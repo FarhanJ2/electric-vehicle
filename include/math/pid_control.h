@@ -15,6 +15,13 @@ class pid_control {
         pid_control(float p, float i, float d)
             : kp(p), ki(i), kd(d), previous_error(0), integral(0) {}
 
+        void set_pid(float p, float i, float d) {
+            kp = p;
+            ki = i;
+            kd = d;
+            reset();
+        }
+
         double compute(double setpoint, double measured_value, double dt) {
             double error = setpoint - measured_value;
             integral += error * dt;

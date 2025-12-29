@@ -1,64 +1,65 @@
 #include "hardware/motor_hw.h"
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
+#include <algorithm>
 
-static uint slice;
-
-// Set PWM duty in range 0–1000 (because wrap = 1000)
-static inline void pwm_set_duty(uint16_t duty) {
-    if (duty > 1000) duty = 1000;
-    pwm_set_chan_level(slice, pwm_gpio_to_channel(MOTOR_PIN_ENA), duty);
+motor_hw::motor_hw(uint8_t pin_ln1, uint8_t pin_ln2, uint8_t pin_ena)
+    : ln1_pin(pin_ln1), ln2_pin(pin_ln2), ena_pin(pin_ena), pwm_slice(0)
+{
+    init();
 }
 
-void motor_hw_init() {
-    // Direction pins
-    gpio_init(MOTOR_PIN_LN_1);
-    gpio_set_dir(MOTOR_PIN_LN_1, GPIO_OUT);
+void motor_hw::init() {
+    gpio_init(ln1_pin);
+    gpio_set_dir(ln1_pin, GPIO_OUT);
 
-    gpio_init(MOTOR_PIN_LN_2);
-    gpio_set_dir(MOTOR_PIN_LN_2, GPIO_OUT);
+    gpio_init(ln2_pin);
+    gpio_set_dir(ln2_pin, GPIO_OUT);
 
-    // ENA pin for PWM
-    gpio_set_function(MOTOR_PIN_ENA, GPIO_FUNC_PWM);
-    slice = pwm_gpio_to_slice_num(MOTOR_PIN_ENA);
+    gpio_set_function(ena_pin, GPIO_FUNC_PWM);
+    pwm_slice = pwm_gpio_to_slice_num(ena_pin);
 
-    // Set PWM to ~1 kHz (L298N safe)
-    pwm_set_clkdiv(slice, 125.0f); // slow main clock
-    pwm_set_wrap(slice, 1000);     // 0–1000 resolution
-    pwm_set_chan_level(slice, pwm_gpio_to_channel(MOTOR_PIN_ENA), 0);
+    pwm_set_clkdiv(pwm_slice, 125.0f);
+    pwm_set_wrap(pwm_slice, 1000);
+    pwm_set_chan_level(pwm_slice, pwm_gpio_to_channel(ena_pin), 0);
 
-    pwm_set_enabled(slice, true);
+    pwm_set_enabled(pwm_slice, true);
 
-    motor_stop();
+    stop();
 }
 
-void motor_forward(uint16_t speed) {
-    gpio_put(MOTOR_PIN_LN_1, 1);
-    gpio_put(MOTOR_PIN_LN_2, 0);
-    pwm_set_duty(speed);    // 0–1000
+void motor_hw::pwm_set_duty(uint16_t duty) {
+    duty = std::min<uint16_t>(duty, 1000);
+    pwm_set_chan_level(pwm_slice, pwm_gpio_to_channel(ena_pin), duty);
 }
 
-void motor_backward(uint16_t speed) {
-    gpio_put(MOTOR_PIN_LN_1, 0);
-    gpio_put(MOTOR_PIN_LN_2, 1);
+void motor_hw::forward(uint16_t speed) {
+    gpio_put(ln1_pin, 1);
+    gpio_put(ln2_pin, 0);
     pwm_set_duty(speed);
 }
 
-void motor_stop() {
-    gpio_put(MOTOR_PIN_LN_1, 0);
-    gpio_put(MOTOR_PIN_LN_2, 0);
+void motor_hw::backward(uint16_t speed) {
+    gpio_put(ln1_pin, 0);
+    gpio_put(ln2_pin, 1);
+    pwm_set_duty(speed);
+}
+
+void motor_hw::stop() {
+    gpio_put(ln1_pin, 0);
+    gpio_put(ln2_pin, 0);
     pwm_set_duty(0);
 }
 
-void motor_test() {
-    motor_forward(800);  // strong forward
+void motor_hw::test() {
+    forward(800);
     sleep_ms(1500);
 
-    motor_stop();
+    stop();
     sleep_ms(500);
 
-    motor_backward(800); // strong backward
+    backward(800);
     sleep_ms(1500);
 
-    motor_stop();
+    stop();
 }

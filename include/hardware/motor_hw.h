@@ -1,13 +1,21 @@
 #pragma once
-
 #include <cstdint>
 
-#define MOTOR_PIN_LN_1 7
-#define MOTOR_PIN_LN_2 6
-#define MOTOR_PIN_ENA  8
+class motor_hw {
+public:
+    motor_hw(uint8_t pin_ln1, uint8_t pin_ln2, uint8_t pin_ena);
 
-void motor_hw_init();
-void motor_forward(uint16_t speed);   // 0–1000
-void motor_backward(uint16_t speed);  // 0–1000
-void motor_stop();
-void motor_test();
+    void init();
+    void forward(uint16_t speed);   // 0–1000
+    void backward(uint16_t speed);  // 0–1000
+    void stop();
+    void test();
+
+private:
+    uint8_t ln1_pin;
+    uint8_t ln2_pin;
+    uint8_t ena_pin;
+    uint8_t pwm_slice;
+
+    void pwm_set_duty(uint16_t duty);
+};
