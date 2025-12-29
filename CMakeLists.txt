@@ -47,17 +47,16 @@ target_link_libraries(pico_ssd1306 PUBLIC
         hardware_i2c
 )
 
-# Add executable. Default name is the project name, version 0.1
-add_executable(elec-vehicle
-        src/main.cpp
-        src/periodic.cpp
-        src/math/trapezoid_profile.cpp
-        src/math/vector_3d.cpp
-        src/hardware/button_hw.cpp
-        src/hardware/imu_hw.cpp
-        src/hardware/motor_hw.cpp
-        src/hardware/oled_hw.cpp
+add_executable(elec-vehicle)
+
+file(GLOB_RECURSE PROJECT_SOURCES
+    CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/*.c
 )
+
+target_sources(elec-vehicle PRIVATE ${PROJECT_SOURCES})
+
 
 pico_set_program_name(elec-vehicle "elec-vehicle")
 pico_set_program_version(elec-vehicle "0.1")
@@ -66,21 +65,19 @@ pico_set_program_version(elec-vehicle "0.1")
 pico_enable_stdio_uart(elec-vehicle 1)
 pico_enable_stdio_usb(elec-vehicle 1)
 
-# Add the standard library to the build
-target_link_libraries(elec-vehicle
-        pico_stdlib)
-
 # Add the standard include files to the build
 target_include_directories(elec-vehicle PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
-# Add any user requested libraries
+
+# Add all libraries in the correct order
 target_link_libraries(elec-vehicle 
+        pico_stdlib
+        pico_cyw43_arch_lwip_threadsafe_background
         hardware_spi
         hardware_i2c
         hardware_pwm
-        pico_cyw43_arch_none
         pico_ssd1306
         pico_mpu_9250
         )

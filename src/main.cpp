@@ -1,13 +1,19 @@
 #include <cstdio>
 #include <string>
+#include <cmath>
+
+#include "pico/stdlib.h"
+#include "pico/cyw43_arch.h"
 
 #include "hardware/i2c.h"
 #include "hardware/spi.h"
 #include "hardware/uart.h"
-#include "pico/cyw43_arch.h"
-#include "pico/stdlib.h"
+
+#include "lwip/udp.h"
+#include "lwip/ip_addr.h"
 
 #include "periodic.h"
+#include "telemetry.h"
 #include "constant.h"
 
 #include "hardware/imu_hw.h"
@@ -33,6 +39,9 @@ bool lmotor_fault = false;
 bool rmotor_fault = false;
 bool has_fault = false;
 
+bool wifi_fault = false;
+bool run_telemetry = false;
+
 button_hw start_prod(1);
 button_hw btn_forward(13);
 button_hw btn_backward(28);
@@ -47,19 +56,18 @@ int main() {
     // Initialise the Wi-Fi chip
     printf("Initializing Wi-Fi...\n");
     fflush(stdout);
-    
-    if (cyw43_arch_init()) {
+
+    if (telemetry_chip_init()) {
         std::printf("Wi-Fi init failed\n");
-        return -1;
+        wifi_fault = true;
     }
-    
     printf("Wi-Fi initialized.\n");
     fflush(stdout);
 
     // turn on the Pico W LED
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
 
-    sleep_ms(1000); // wait for a second
+    sleep_ms(1000);
 
     if (imu_hw_init()) {
         printf("[IMU] initialization failed!\n");
@@ -73,6 +81,36 @@ int main() {
 
     motor_hw_init();
 
+    if (run_telemetry) {
+        const int max_retries = 3;
+        int attempt = 0;
+
+        while (attempt < max_retries) {
+            if (telemetry_init() == 0) {
+                printf("[Telemetry] Initialized successfully.\n");
+                wifi_fault = false;
+                break;
+            } else {
+                wifi_fault = true;
+                printf("[Telemetry] Initialization failed! Attempt %d/%d\n", attempt + 1, max_retries);
+                attempt++;
+
+                if (attempt < max_retries) {
+                    printf("[Telemetry] Retrying...\n");
+                    sleep_ms(1000); // wait 1 second before retrying
+                }
+            }
+        }
+
+        if (wifi_fault) {
+            printf("[Telemetry] Failed to initialize telemetry after %d attempts.\n", max_retries);
+        }
+    } else {
+        printf("[Telemetry] Skipping Wi-Fi connection at competition.\n");
+        wifi_fault = true;
+    }
+
+    
     has_fault = imu_fault || lmotor_fault || rmotor_fault || oled_fault;
     uint8_t fault_count =
         (imu_fault ? 1 : 0) +
@@ -84,8 +122,7 @@ int main() {
     oled_hw_clear();
     oled_hw_print(0, 0, "Nebula Runner [Alpha]");
     oled_hw_print(0, 20, ("[IMU] " + std::string(imu_fault ? "FAULT" : "READY")).c_str());
-    oled_hw_print(0, 30, ("[MOTORLEFT] " + std::string(lmotor_fault ? "FAULT" : "READY")).c_str());
-    oled_hw_print(0, 40, ("[MOTORRIGHT] " + std::string(rmotor_fault ? "FAULT" : "READY")).c_str());
+    oled_hw_print(0, 30, ("[Telemetry] " + std::string(wifi_fault ? "FAULT" : "READY")).c_str());
     oled_hw_print(0, 55, ("[System " + std::string(has_fault == 0 ? "READY" : "FAILED") + std::string("]")).c_str());
     oled_hw_update();
 
@@ -106,18 +143,33 @@ int main() {
                 : 0;
 
     absolute_time_t next_blink = make_timeout_time_ms(blink_ms);
+    absolute_time_t next_telemetry = make_timeout_time_ms(50); // 20Hz
 
     while (true) {
+        cyw43_arch_poll();
         periodic();
         button_bindings();
         imu_hw_poll();
         update_display();
+        
+        // Send telemetry at regular intervals
+        if (absolute_time_diff_us(get_absolute_time(), next_telemetry) <= 0) {
+            float ax, ay, az, gx, gy, gz;
+            imu_get_accel(&ax, &ay, &az);
+            imu_get_gyro(&gx, &gy, &gz);
+            float pitch = atan2(ay, sqrt(ax*ax + az*az)) * 180.0f / M_PI;
+            float roll  = atan2(-ax, az) * 180.0f / M_PI; 
+            float yaw   = 0;
+            telemetry_send(pitch, roll, yaw, ax, ay, az, gx, gy, gz);
+            next_telemetry = make_timeout_time_ms(50); // 20Hz
+        }
         
         if (absolute_time_diff_us(get_absolute_time(), next_blink) <= 0) {
             led_on = !led_on;
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
             next_blink = make_timeout_time_ms(blink_ms);
         }
+        
         sleep_ms(int(constants::dt * 1000));
     }
 }
@@ -160,10 +212,10 @@ void update_display() {
     oled_hw_clear();
     
     if (current_display == DISPLAY_STATUS) {
+        oled_hw_clear();
         oled_hw_print(0, 0, "Nebula Runner [Alpha]");
         oled_hw_print(0, 20, ("[IMU] " + std::string(imu_fault ? "FAULT" : "READY")).c_str());
-        oled_hw_print(0, 30, ("[MOTORLEFT] " + std::string(lmotor_fault ? "FAULT" : "READY")).c_str());
-        oled_hw_print(0, 40, ("[MOTORRIGHT] " + std::string(rmotor_fault ? "FAULT" : "READY")).c_str());
+        oled_hw_print(0, 30, ("[Telemetry] " + std::string(wifi_fault ? (run_telemetry ? "FAULT" : "DISABLED") : "READY")).c_str());
         oled_hw_print(0, 55, ("[System " + std::string(has_fault == 0 ? "READY" : "FAILED") + std::string("]")).c_str());
     } else if (current_display == DISPLAY_IMU_ANGLES) {
         oled_hw_print(0, 0, "IMU Angles:");
