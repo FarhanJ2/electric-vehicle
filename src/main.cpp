@@ -20,7 +20,8 @@ void update_display();
 
 enum DisplayMode {
     DISPLAY_STATUS,
-    DISPLAY_IMU
+    DISPLAY_IMU_ROC, // rate of change
+    DISPLAY_IMU_ANGLES
 };
 
 DisplayMode current_display = DISPLAY_STATUS;
@@ -134,28 +135,23 @@ void button_bindings() {
         motor_stop();
     }
 
-    // Toggle display mode when forward button is pressed
     if (btn_forward.just_pressed()) {
         if (current_display == DISPLAY_STATUS) {
-            current_display = DISPLAY_IMU;
-        } else {
+            current_display = DISPLAY_IMU_ANGLES;
+        } else if (current_display == DISPLAY_IMU_ANGLES) {
+            current_display = DISPLAY_IMU_ROC;
+        } else if (current_display == DISPLAY_IMU_ROC) {
             current_display = DISPLAY_STATUS;
         }
-    }
-
-    // Go back to status when backward is pressed
-    if (btn_backward.just_pressed()) {
-        current_display = DISPLAY_STATUS;
     }
 }
 
 void update_display() {
     static absolute_time_t last_update = nil_time;
     
-    // Update display every 100ms
     if (!is_nil_time(last_update)) {
         int64_t elapsed_us = absolute_time_diff_us(last_update, get_absolute_time());
-        if (elapsed_us < 100000) {  // 100ms
+        if (elapsed_us < 100000) {
             return;
         }
     }
@@ -169,8 +165,19 @@ void update_display() {
         oled_hw_print(0, 30, ("[MOTORLEFT] " + std::string(lmotor_fault ? "FAULT" : "READY")).c_str());
         oled_hw_print(0, 40, ("[MOTORRIGHT] " + std::string(rmotor_fault ? "FAULT" : "READY")).c_str());
         oled_hw_print(0, 55, ("[System " + std::string(has_fault == 0 ? "READY" : "FAILED") + std::string("]")).c_str());
-    } else if (current_display == DISPLAY_IMU) {
-        // Get current IMU values
+    } else if (current_display == DISPLAY_IMU_ANGLES) {
+        oled_hw_print(0, 0, "IMU Angles:");
+        
+        char buf[32];
+        snprintf(buf, sizeof(buf), "Pitch: %.1f", pitch);
+        oled_hw_print(0, 20, buf);
+        
+        snprintf(buf, sizeof(buf), "Roll:  %.1f", roll);
+        oled_hw_print(0, 30, buf);
+        
+        snprintf(buf, sizeof(buf), "Yaw:   %.1f", yaw);
+        oled_hw_print(0, 45, buf);
+    } else if (current_display == DISPLAY_IMU_ROC) {
         float ax, ay, az, gx, gy, gz;
         imu_get_accel(&ax, &ay, &az);
         imu_get_gyro(&gx, &gy, &gz);
